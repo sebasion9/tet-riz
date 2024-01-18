@@ -18,7 +18,7 @@ struct GameState {
 impl GameState {
     pub fn new() -> Self {
         GameState {
-            tetromino : Tetromino::from_shape(&Shape::Z),
+            tetromino : Tetromino::from_shape(&Shape::Long),
             placed_tetr : Vec::new()
         }
 
@@ -30,14 +30,20 @@ impl GameState {
 impl event::EventHandler<ggez::GameError> for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         while ctx.time.check_update_time(SCREEN_CONF.desired_fps) {
-            if !self.tetromino.is_colliding(SCREEN_CONF.size.1) {
-                self.tetromino.update(); 
+            let current_tetr = &mut self.tetromino;
+            let extr_cells = current_tetr.get_extr_cells(true);
+            if extr_cells.len() > 0  {
+                let (under,xs) = current_tetr.get_tetr_under(&extr_cells, &self.placed_tetr);
+                if  current_tetr.is_colliding(under, xs, SCREEN_CONF.size) {
+                    let placed = Tetromino::clone(&current_tetr);
+                    self.push_tetr(placed);
+                    self.tetromino = Tetromino::from_shape(&Shape::random());
+                }
+                else {
+                    current_tetr.update();
+                }
             }
-            else {
-                let placed = Tetromino::clone(&self.tetromino);
-                self.push_tetr(placed);
-                self.tetromino = Tetromino::from_shape(&Shape::random());
-            }
+            
         }
         Ok(()) 
     }

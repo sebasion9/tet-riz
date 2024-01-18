@@ -6,6 +6,7 @@ use oorandom::Rand32;
 use getrandom;
 use crate::conf::{SCREEN_CONF, ScreenConf};
 use crate::steering::Direction;
+#[derive(Debug)]
 pub struct Tetromino {
     st : GridPosition,
     nd : GridPosition,
@@ -14,6 +15,7 @@ pub struct Tetromino {
     shape : Shape
 }
 impl Tetromino {
+    // init self methods 
     pub fn from_shape(shape : &Shape) -> Self {
         match shape{
             &Shape::Long => {
@@ -75,57 +77,96 @@ impl Tetromino {
     pub fn clone(obj : &Tetromino) -> Self {
         Tetromino::new(obj.st, obj.nd, obj.rd, obj.th, obj.shape)
     }
-    pub fn get_tip(&self, dir : Direction) -> i16 {
-        let mut extr = self.st;
-        let x_s = [self.st.x, self.nd.x, self.rd.x, self.th.x];
-        let y_s = [self.st.y, self.nd.y, self.rd.y, self.th.y];
-        match dir {
-            Direction::Up => {
-                for y in y_s {
-                    if y < extr.y {
-                        extr.y = y; 
+    // collision logic 
+    pub fn is_colliding(&self, under: Vec<Tetromino>, xs : Vec<i16>,  board_size : (i16,i16)) -> bool {
+        //println!("{}", under.len());
+        let mut highest : Vec<GridPosition> = Vec::new(); 
+        let falling_cells = self.get_extr_cells(true);
+        for tetr in under {
+            let high_cells = tetr.get_extr_cells(false);
+            for cell in high_cells {
+                for x in &xs {
+                    if cell.x == *x {
+                        highest.push(cell);
                     }
                 }
-                return extr.y
-            },
-            Direction::Down => {
-                for y in y_s {
-                    if y > extr.y {
-                        extr.y = y;
-                    }
-                }
-                return extr.y
-            },
-            Direction::Right => {
-                for x in x_s {
-                    if x > extr.x {
-                        extr.x = x
-                    }
-                }
-                return extr.x
-            },
-            Direction::Left => {
-                for x in x_s {
-                    if x < extr.x {
-                        extr.x = x
-                    }
-                }
-                return extr.x
             }
-            _=> return extr.x
         }
-    }
-    pub fn is_colliding(&mut self, pos_y : i16) -> bool {
-        let max = self.get_tip(Direction::Down);
-        if max == pos_y - 1 {
-            return true
+        let mut is_colliding : bool = false;
+        if falling_cells.len() <= highest.len() {
+            for cell in falling_cells {
+                for bot_cell in &highest {
+                    if cell.x == bot_cell.x && cell.y == bot_cell.y - 1 {
+                        is_colliding = true;
+                        break;
+                    }
+                }
+            }
         }
         else {
-            return false
+            for cell in falling_cells {
+                if cell.y == board_size.1 - 1 {
+                    is_colliding = true;
+                    break;
+                }
+            }
         }
+        is_colliding
     }
+    pub fn get_extr_cells(&self, is_falling : bool) -> Vec<GridPosition> {
+        let mut max = 0;
+        let mut min = SCREEN_CONF.size.1;
+        let mut res : Vec<GridPosition> = Vec::new();
+        let cell_pos = [self.st, self.nd, self.rd, self.th];
+        if is_falling {
+            for pos in cell_pos {
+                if pos.y > max {
+                    max = pos.y;
+                }
+            }
+            for pos in cell_pos {
+                if pos.y == max {
+                    res.push(pos);
+                }
+            }
 
+        }
+        else {
+            for pos in cell_pos {
+                if pos.y < min {
+                    min = pos.y;
+                }
+            }
+            for pos in cell_pos {
+                if pos.y == min{
+                    res.push(pos);
+                }
+            }
+        }
+        res
+    }
+    pub fn get_tetr_under(&self, falling_cells : &Vec<GridPosition>, placed_tetr : &Vec<Tetromino>) -> (Vec<Tetromino>, Vec<i16>) {
+        let mut tetr_under : Vec<Tetromino> = Vec::new();
+        let mut xs : Vec<i16> = Vec::new();
+        for pos in falling_cells {
+            xs.push(pos.x);
+        }
+        if placed_tetr.len() > 0 {
+            for tetr_index in 0..placed_tetr.len()-1 {
+                let tetr = &placed_tetr[tetr_index];
+                for x in &xs {
+                    if tetr.st.x == *x || tetr.nd.x == *x || tetr.rd.x == *x || tetr.th.x == *x {
+                        tetr_under.push(Tetromino::clone(&tetr));
+                    }
+                }
+            }
+
+        }
+        (tetr_under, xs)
+
+    }
     
+    // render methods 
     pub fn draw(&mut self, canvas : &mut graphics::Canvas) {
         for i in 0..4 {
             let pos = match i {
@@ -160,8 +201,8 @@ impl Tetromino {
 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct GridPosition {
-    x:i16,
-    y:i16
+    pub x:i16,
+    pub y:i16
 }
 impl GridPosition {
     pub fn new(x:i16, y:i16) -> Self{
@@ -183,7 +224,7 @@ impl From<GridPosition> for graphics::Rect {
         )
     }
 }
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Shape {
     Long,
     T,
@@ -197,7 +238,6 @@ impl Shape {
         getrandom::getrandom(&mut seed[..]).expect("couldnt generate RNG seed");
         let mut rng = Rand32::new(u64::from_ne_bytes(seed)); 
         let random_num = rng.rand_range(0..5);
-        println!("{}", random_num);
         match random_num {
             0 => Shape::Long,
             1 => Shape::T,
