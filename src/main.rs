@@ -1,6 +1,7 @@
 mod tetromino;
 mod conf;
 mod steering;
+mod col;
 //use oorandom::Rand32;
 use crate::tetromino::{Tetromino, GridPosition, Shape};
 use crate::conf::SCREEN_CONF;
@@ -31,17 +32,13 @@ impl event::EventHandler<ggez::GameError> for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         while ctx.time.check_update_time(SCREEN_CONF.desired_fps) {
             let current_tetr = &mut self.tetromino;
-            let extr_cells = current_tetr.get_extr_cells(true);
-            if extr_cells.len() > 0  {
-                let (under,xs) = current_tetr.get_tetr_under(&extr_cells, &self.placed_tetr);
-                if  current_tetr.is_colliding(under, xs, SCREEN_CONF.size) {
-                    let placed = Tetromino::clone(&current_tetr);
-                    self.push_tetr(placed);
-                    self.tetromino = Tetromino::from_shape(&Shape::random());
-                }
-                else {
-                    current_tetr.update();
-                }
+            if  current_tetr.is_colliding(&self.placed_tetr) || current_tetr.is_colliding_ground(SCREEN_CONF.size.1) {
+                let placed = Tetromino::clone(&current_tetr);
+                self.push_tetr(placed);
+                self.tetromino = Tetromino::from_shape(&Shape::random());
+            }
+            else {
+                current_tetr.update();
             }
             
         }

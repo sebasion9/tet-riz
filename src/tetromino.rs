@@ -6,6 +6,7 @@ use oorandom::Rand32;
 use getrandom;
 use crate::conf::{SCREEN_CONF, ScreenConf};
 use crate::steering::Direction;
+use crate::col::are_colliding;
 #[derive(Debug)]
 pub struct Tetromino {
     st : GridPosition,
@@ -16,6 +17,9 @@ pub struct Tetromino {
 }
 impl Tetromino {
     // init self methods 
+    pub fn iter_blocks (&self) -> Vec<&GridPosition> {
+        vec![&self.st, &self.nd, &self.rd, &self.th]
+    }
     pub fn from_shape(shape : &Shape) -> Self {
         match shape{
             &Shape::Long => {
@@ -78,94 +82,23 @@ impl Tetromino {
         Tetromino::new(obj.st, obj.nd, obj.rd, obj.th, obj.shape)
     }
     // collision logic 
-    pub fn is_colliding(&self, under: Vec<Tetromino>, xs : Vec<i16>,  board_size : (i16,i16)) -> bool {
-        //println!("{}", under.len());
-        let mut highest : Vec<GridPosition> = Vec::new(); 
-        let falling_cells = self.get_extr_cells(true);
-        for tetr in under {
-            let high_cells = tetr.get_extr_cells(false);
-            for cell in high_cells {
-                for x in &xs {
-                    if cell.x == *x {
-                        highest.push(cell);
-                    }
-                }
+    pub fn is_colliding (&self, placed_tetr : &Vec<Tetromino>) -> bool {
+        let mut all_placed_blocks : Vec<GridPosition> = Vec::new(); 
+        for tetr in placed_tetr {
+            for block in tetr.iter_blocks() {
+                all_placed_blocks.push(*block);
             }
         }
-        let mut is_colliding : bool = false;
-        if falling_cells.len() <= highest.len() {
-            for cell in falling_cells {
-                for bot_cell in &highest {
-                    if cell.x == bot_cell.x && cell.y == bot_cell.y - 1 {
-                        is_colliding = true;
-                        break;
-                    }
-                }
-            }
-        }
-        else {
-            for cell in falling_cells {
-                if cell.y == board_size.1 - 1 {
-                    is_colliding = true;
-                    break;
-                }
-            }
-        }
-        is_colliding
+        are_colliding(&self.iter_blocks(), &all_placed_blocks) 
     }
-    pub fn get_extr_cells(&self, is_falling : bool) -> Vec<GridPosition> {
-        let mut max = 0;
-        let mut min = SCREEN_CONF.size.1;
-        let mut res : Vec<GridPosition> = Vec::new();
-        let cell_pos = [self.st, self.nd, self.rd, self.th];
-        if is_falling {
-            for pos in cell_pos {
-                if pos.y > max {
-                    max = pos.y;
-                }
-            }
-            for pos in cell_pos {
-                if pos.y == max {
-                    res.push(pos);
-                }
-            }
-
-        }
-        else {
-            for pos in cell_pos {
-                if pos.y < min {
-                    min = pos.y;
-                }
-            }
-            for pos in cell_pos {
-                if pos.y == min{
-                    res.push(pos);
-                }
+    pub fn is_colliding_ground(&self, bottom_y : i16) -> bool {
+        for block in self.iter_blocks() {
+            if block.y == bottom_y - 1 {
+                return true
             }
         }
-        res
+        return false
     }
-    pub fn get_tetr_under(&self, falling_cells : &Vec<GridPosition>, placed_tetr : &Vec<Tetromino>) -> (Vec<Tetromino>, Vec<i16>) {
-        let mut tetr_under : Vec<Tetromino> = Vec::new();
-        let mut xs : Vec<i16> = Vec::new();
-        for pos in falling_cells {
-            xs.push(pos.x);
-        }
-        if placed_tetr.len() > 0 {
-            for tetr_index in 0..placed_tetr.len()-1 {
-                let tetr = &placed_tetr[tetr_index];
-                for x in &xs {
-                    if tetr.st.x == *x || tetr.nd.x == *x || tetr.rd.x == *x || tetr.th.x == *x {
-                        tetr_under.push(Tetromino::clone(&tetr));
-                    }
-                }
-            }
-
-        }
-        (tetr_under, xs)
-
-    }
-    
     // render methods 
     pub fn draw(&mut self, canvas : &mut graphics::Canvas) {
         for i in 0..4 {
