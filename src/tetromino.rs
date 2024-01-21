@@ -1,10 +1,7 @@
 use ggez::graphics;
-use ggez::{
-    input::keyboard::{KeyCode}
-};
 use oorandom::Rand32;
 use getrandom;
-use crate::conf::{SCREEN_CONF, ScreenConf};
+use crate::conf::SCREEN_CONF;
 use crate::steering::Direction;
 use crate::col::are_colliding;
 #[derive(Debug)]
@@ -19,6 +16,9 @@ impl Tetromino {
     // init self methods 
     pub fn iter_blocks (&self) -> Vec<&GridPosition> {
         vec![&self.st, &self.nd, &self.rd, &self.th]
+    }
+    pub fn iter_blocks_mut(&mut self) -> Vec<&mut GridPosition>{
+        vec![&mut self.st, &mut self.nd, &mut self.rd, &mut self.th]
     }
     pub fn from_shape(shape : &Shape) -> Self {
         match shape{
@@ -82,20 +82,39 @@ impl Tetromino {
         Tetromino::new(obj.st, obj.nd, obj.rd, obj.th, obj.shape)
     }
     // collision logic 
-    pub fn is_colliding (&self, placed_tetr : &Vec<Tetromino>) -> bool {
+    pub fn is_colliding (&self, placed_tetr : &Vec<Tetromino>, dir : &Direction) -> bool {
         let mut all_placed_blocks : Vec<GridPosition> = Vec::new(); 
         for tetr in placed_tetr {
             for block in tetr.iter_blocks() {
                 all_placed_blocks.push(*block);
             }
         }
-        are_colliding(&self.iter_blocks(), &all_placed_blocks) 
+        are_colliding(&self.iter_blocks(), &all_placed_blocks, dir) 
     }
-    pub fn is_colliding_ground(&self, bottom_y : i16) -> bool {
-        for block in self.iter_blocks() {
-            if block.y == bottom_y - 1 {
-                return true
-            }
+    pub fn is_colliding_wall(&self, wall_cord: i16, dir : &Direction) -> bool {
+        match dir {
+            Direction::Down => {
+                for block in self.iter_blocks() {
+                    if block.y == wall_cord - 1 {
+                        return true
+                    }
+                }
+            },
+            Direction::Left => {
+                for block in self.iter_blocks() {
+                    if block.x == wall_cord {
+                        return true
+                    }
+                }
+            },
+            Direction::Right => {
+                for block in self.iter_blocks() {
+                    if block.x == wall_cord - 1 {
+                        return true
+                    }
+                }
+            },
+            _=> return false 
         }
         return false
     }
@@ -124,11 +143,26 @@ impl Tetromino {
     pub fn update(&mut self) {
         self.lower(1);
     }
+    // movement
+    pub fn move_inline(&mut self, dir : &Direction) {
+        match dir {
+            Direction::Left => {
+                for block in self.iter_blocks_mut() {
+                    block.x -= 1;
+                }
+            },
+            Direction::Right => {
+                for block in self.iter_blocks_mut() {
+                    block.x += 1;
+                }
+            },
+            _ => todo!()
+        }
+    }
     fn lower(&mut self, dist : i16)  {
-        self.st.y = self.st.y + dist;
-        self.nd.y = self.nd.y + dist;
-        self.rd.y = self.rd.y + dist;
-        self.th.y = self.th.y + dist;
+        for block in self.iter_blocks_mut() {
+            block.y += dist;
+        }
     }
 
 }

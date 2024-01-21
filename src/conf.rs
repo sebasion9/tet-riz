@@ -4,13 +4,18 @@ pub struct ScreenConf {
     pub screen_size : (f32, f32),
     pub desired_fps : u32
 }
+// dev conf
 pub const GRID_SIZE: (i16, i16) = (10, 20);
 pub const GRID_CELL_SIZE : (i16, i16) = (25, 25);
 pub const SCREEN_SIZE : (f32, f32) = (
     GRID_SIZE.0 as f32 * GRID_CELL_SIZE.0 as f32,
     GRID_SIZE.1 as f32 * GRID_CELL_SIZE.1 as f32,
     );
-pub const DESIRED_FPS : u32 = 8;
+pub const DESIRED_FPS : u32 = 4;
+
+
+
+
 pub static SCREEN_CONF : ScreenConf = ScreenConf {
     size: GRID_SIZE,
     cell_size : GRID_CELL_SIZE,
