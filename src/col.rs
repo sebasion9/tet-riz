@@ -1,9 +1,7 @@
-use crate::{tetromino::{GridPosition}, steering::Direction};
-
-type Pos = GridPosition;
+use crate::{tetromino::Pos, steering::Direction};
 
 // for now, only direction DOWN implementation, as it is not needed to implement other 
-pub fn are_colliding(block1 : &Vec<&Pos>, block2 : &Vec<Pos>, dir : &Direction) -> bool {
+pub fn are_colliding(block1 : &Vec<Pos>, block2 : &Vec<Pos>, dir : &Direction) -> bool {
     let valid_xs : Vec<i16> = block1
         .iter()
         .map(|pos| pos.x).collect();
@@ -71,7 +69,7 @@ mod tests {
             Pos::new(3, 3)
         ];
         
-        assert!(!are_colliding(&moving_item, &stationary_item));
+        assert!(!are_colliding(&moving_item, &stationary_item, &Direction::Down));
     }
     #[test]
     fn test_collision_collision() {
@@ -87,7 +85,7 @@ mod tests {
             Pos::new(1, 2),
             Pos::new(1, 3)
         ];
-        assert!(are_colliding(&moving_item, &stationary_item));
+        assert!(are_colliding(&moving_item, &stationary_item, &Direction::Down));
     }
 
     

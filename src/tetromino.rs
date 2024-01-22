@@ -6,109 +6,113 @@ use crate::steering::Direction;
 use crate::col::are_colliding;
 #[derive(Debug)]
 pub struct Tetromino {
-    st : GridPosition,
-    nd : GridPosition,
-    rd : GridPosition,
-    th : GridPosition,
+    pub blocks: [Pos; 4],
     shape : Shape
 }
 impl Tetromino {
-    // init self methods 
-    pub fn iter_blocks (&self) -> Vec<&GridPosition> {
-        vec![&self.st, &self.nd, &self.rd, &self.th]
-    }
-    pub fn iter_blocks_mut(&mut self) -> Vec<&mut GridPosition>{
-        vec![&mut self.st, &mut self.nd, &mut self.rd, &mut self.th]
-    }
+    // constructors
     pub fn from_shape(shape : &Shape) -> Self {
         match shape{
             &Shape::Long => {
                Tetromino {
-                   st : GridPosition { x: 0, y: 0 },
-                   nd: GridPosition { x: 1, y: 0 },
-                   rd : GridPosition { x: 2, y: 0 },
-                   th : GridPosition { x: 3, y: 0 },
-                   shape : Shape::Long
+                    blocks : [ 
+                    Pos { x: 0, y: 0 },
+                    Pos { x: 1, y: 0},
+                    Pos { x : 2, y : 0},
+                    Pos { x :3, y: 0}],
+                    shape : Shape::Long
                }
             }
             &Shape::Z => {
                Tetromino {
-                   st : GridPosition { x: 0, y: 0 },
-                   nd: GridPosition { x: 0, y: 1 },
-                   rd : GridPosition { x: 1, y: 1 },
-                   th : GridPosition { x: 1, y: 2 },
+                   blocks : [
+                       Pos { x: 0, y: 0 },
+                       Pos { x: 0, y: 1 },
+                       Pos { x: 1, y: 1 },
+                       Pos { x: 1, y: 2 }
+                   ],
                    shape : Shape::Z
                }
             }
             &Shape::T => {
                 Tetromino {
-                    st : GridPosition { x: 0, y: 0 },
-                    nd: GridPosition { x: 1, y: 0 },
-                    rd : GridPosition { x: 2, y: 0 },
-                    th : GridPosition { x: 1, y: 1 },
+                    blocks  :[
+                        Pos { x: 0, y: 0 },
+                        Pos { x: 1, y: 0 },
+                        Pos { x: 2, y: 0 },
+                        Pos { x: 1, y: 1 },
+                    ],
                     shape : Shape::T
                 }
             }
             &Shape::Square=> {
                 Tetromino {
-                    st : GridPosition { x: 0, y: 0 },
-                    nd: GridPosition { x: 1, y: 0 },
-                    rd : GridPosition { x: 0, y: 1 },
-                    th : GridPosition { x: 1, y: 1 },
+                    blocks : [
+                        Pos { x: 0, y: 0 },
+                        Pos { x: 1, y: 0 },
+                        Pos { x: 0, y: 1 },
+                        Pos { x: 1, y: 1 },
+                    ],
                     shape : Shape::Square
                 }
             }
             &Shape::L => {
                 Tetromino {
-                    st : GridPosition { x: 0, y: 0 },
-                    nd : GridPosition { x: 0, y: 1 },
-                    rd : GridPosition { x: 0, y: 2 },
-                    th : GridPosition { x: 1, y: 2 },
+                    blocks : [
+                        Pos { x: 0, y: 0 },
+                        Pos { x: 0, y: 1 },
+                        Pos { x: 0, y: 2 },
+                        Pos { x: 1, y: 2 },
+                    ],
                     shape : Shape::L
                 }
             }
         }
     }
-    pub fn new(st : GridPosition, nd : GridPosition, rd : GridPosition, th : GridPosition, shape : Shape) -> Self {
+    pub fn new(st : Pos, nd : Pos, rd : Pos, th : Pos, shape : Shape) -> Self {
         Tetromino {
-            st,
-            nd,
-            rd,
-            th,
+            blocks : [
+                st,
+                nd,
+                rd,
+                th,
+            ],
             shape
         }
     }
     pub fn clone(obj : &Tetromino) -> Self {
-        Tetromino::new(obj.st, obj.nd, obj.rd, obj.th, obj.shape)
+        Tetromino::new(obj.blocks[0], obj.blocks[1], obj.blocks[2], obj.blocks[3], obj.shape)
     }
+
     // collision logic 
-    pub fn is_colliding (&self, placed_tetr : &Vec<Tetromino>, dir : &Direction) -> bool {
-        let mut all_placed_blocks : Vec<GridPosition> = Vec::new(); 
-        for tetr in placed_tetr {
-            for block in tetr.iter_blocks() {
-                all_placed_blocks.push(*block);
-            }
-        }
-        are_colliding(&self.iter_blocks(), &all_placed_blocks, dir) 
+    pub fn is_colliding (&self, placed_blocks : &Vec<Pos>, dir : &Direction) -> bool {
+        are_colliding(&self.blocks.to_vec(), placed_blocks, dir)
     }
     pub fn is_colliding_wall(&self, wall_cord: i16, dir : &Direction) -> bool {
         match dir {
             Direction::Down => {
-                for block in self.iter_blocks() {
+                for block in self.blocks {
                     if block.y == wall_cord - 1 {
                         return true
                     }
                 }
             },
+            Direction::Up => {
+                for block in self.blocks {
+                    if block.y == wall_cord {
+                        return true
+                    }
+                }
+            },
             Direction::Left => {
-                for block in self.iter_blocks() {
+                for block in self.blocks {
                     if block.x == wall_cord {
                         return true
                     }
                 }
             },
             Direction::Right => {
-                for block in self.iter_blocks() {
+                for block in self.blocks {
                     if block.x == wall_cord - 1 {
                         return true
                     }
@@ -118,16 +122,9 @@ impl Tetromino {
         }
         return false
     }
-    // render methods 
+    // 
     pub fn draw(&mut self, canvas : &mut graphics::Canvas) {
         for i in 0..4 {
-            let pos = match i {
-                0 => self.st,
-                1 => self.nd,
-                2 => self.rd,
-                3 => self.th,
-                _=> self.st
-            };
             let color = match self.shape {
                 Shape::Long => graphics::Color::GREEN,
                 Shape::Z => graphics::Color::RED,
@@ -136,7 +133,7 @@ impl Tetromino {
                 Shape::L => graphics::Color::MAGENTA
             };
             canvas.draw(&graphics::Quad, graphics::DrawParam::new()
-                        .dest_rect(pos.into())
+                        .dest_rect(self.blocks[i].into())
                         .color(color));
         }
     }
@@ -147,12 +144,12 @@ impl Tetromino {
     pub fn move_inline(&mut self, dir : &Direction) {
         match dir {
             Direction::Left => {
-                for block in self.iter_blocks_mut() {
+                for block in self.blocks.iter_mut(){
                     block.x -= 1;
                 }
             },
             Direction::Right => {
-                for block in self.iter_blocks_mut() {
+                for block in self.blocks.iter_mut() {
                     block.x += 1;
                 }
             },
@@ -160,29 +157,100 @@ impl Tetromino {
         }
     }
     fn lower(&mut self, dist : i16)  {
-        for block in self.iter_blocks_mut() {
+        for block in self.blocks.iter_mut() {
             block.y += dist;
         }
     }
 
 }
+//
+//
+#[derive(PartialEq)]
+pub struct LineClearResult {
+    y_cord : i16,
+    tetr_indexes : Vec<i16>
+}
+impl LineClearResult {
+    pub fn new(y_cord : i16, tetr_indexes : Vec<i16>) -> Self {
+        LineClearResult {
+            y_cord,
+            tetr_indexes
+        }
+    }
+}
+pub trait TetrIter {
+    //#1 find if any line and which line should be cleared
+    //#2 find what tetrs should be cleared
+    //#3 call another function to clear the tetrs, and lower the tetrs on top
+    fn line_clear(&self, board_width : i16, board_height : i16) -> Option<LineClearResult>;
+    fn max_y(&self, max_height : i16) -> i16;
+}
+impl TetrIter for Vec<Pos> {
+    fn max_y(&self, max_height : i16) -> i16 {
+        let mut max = max_height;
+        if self.len() < 1 {
+            return max
+        }
+        for block in self {
+            if block.y < max {
+                max = block.y;
+            }
+        }
+        max
+    }
+    fn line_clear(&self, bw: i16, bh : i16) -> Option<LineClearResult> {
+        if self.len() < 1 {
+            println!("no line clear");
+            return None
+        }
+        for i in self.max_y(bh)..bh {
+            let mut block_count : i16 = 0;
+            let mut indexes : Vec<i16> = Vec::new();
+            for block in 0..self.len()-1 {
+                if self[block].y == i {
+                    block_count += 1;
+                    indexes.push(block.try_into().unwrap());
+                }
+                if block_count == bw {
+                    println!("line clear");
+                    return Some(LineClearResult::new(i, indexes))
+                }
+            }
+            indexes.clear();
+        }
+        println!("no line clear");
+        return None
+    }
+}
+//
+//
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct GridPosition {
+pub struct Pos {
     pub x:i16,
     pub y:i16
 }
-impl GridPosition {
+pub trait DrawBlock {
+    fn draw(&self, canvas : &mut graphics::Canvas);
+}
+impl DrawBlock for Pos {
+    fn draw(&self, canvas : &mut graphics::Canvas) {
+        canvas.draw(&graphics::Quad, graphics::DrawParam::new()
+                    .dest_rect((*self).into())
+                    .color(graphics::Color::CYAN));
+    }
+}
+impl Pos {
     pub fn new(x:i16, y:i16) -> Self{
-        GridPosition { x, y }
+        Pos { x, y }
     }
 }
-impl From<(i16, i16)> for GridPosition {
+impl From<(i16, i16)> for Pos {
     fn from(pos: (i16, i16)) -> Self {
-        GridPosition { x: pos.0, y: pos.1 }
+        Pos { x: pos.0, y: pos.1 }
     }
 }
-impl From<GridPosition> for graphics::Rect {
-    fn from(pos: GridPosition) -> Self {
+impl From<Pos> for graphics::Rect {
+    fn from(pos: Pos) -> Self {
         graphics::Rect::new_i32(
             pos.x as i32 * SCREEN_CONF.cell_size.0 as i32,
             pos.y as i32 * SCREEN_CONF.cell_size.1 as i32,
@@ -215,8 +283,56 @@ impl Shape {
         }
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn line_clear_filled_fully() {
+        let width : i16 = 2;
+        let height : i16 = 5;
+        let placed_blocks : Vec<Pos> = vec![
+            Pos::new(0, 0),
+            Pos::new(1, 0),
+            Pos::new(2, 0)
+        ];
+        let result = placed_blocks.line_clear(width, height);
+        assert!(result == Some(LineClearResult::new(0,vec![0,1])));
+    }
+    #[test]
+    fn line_clear_filled_partially() {
+        let width : i16 = 2;
+        let height : i16 = 5;
+        let placed_blocks : Vec<Pos> = vec![
+            Pos::new(0,0),
+            Pos::new(0,1),
+            Pos::new(1,0)
+        ];
+        let result = placed_blocks.line_clear(width, height);
+        assert!(result == None)
 
 
+    }
+    #[test]
+    fn line_clear_no_fill() {
+        let width : i16 = 2;
+        let height : i16 = 5;
+        let placed_blocks : Vec<Pos> = Vec::new();
+        let result = placed_blocks.line_clear(width, height);
+        assert!(result == None)
+    }
+    #[test]
+    fn line_clear_dif_y() {
+        let width : i16 = 2;
+        let height : i16 = 5;
+        let placed_blocks : Vec<Pos> = vec![
+            Pos::new(0,0),
+            Pos::new(1,1),
+            Pos::new(2,1)
+        ];
+        let result = placed_blocks.line_clear(width, height);
+        assert!(result == None)
+    }
+}
 
 
 
