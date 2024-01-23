@@ -2,7 +2,9 @@ mod tetromino;
 mod conf;
 mod steering;
 mod col;
-use crate::tetromino::{Tetromino, Shape, Pos, DrawBlock, TetrIter, LineClearResult};
+mod block;
+use crate::tetromino::Tetromino;
+use crate::block::{Shape, Pos, DrawBlock, BlockIter};
 use crate::conf::SCREEN_CONF;
 use ggez::{
     event, graphics,
@@ -41,13 +43,17 @@ impl event::EventHandler<ggez::GameError> for GameState {
             // hanlding placing tetrs on the bottom
             if 
                 current_tetr.is_colliding(&self.placed_blocks, &Direction::Down) || current_tetr.is_colliding_wall(SCREEN_CONF.size.1, &Direction::Down) {
-                let placed = Tetromino::clone(&current_tetr);
-                self.push_tetr(placed);
-                // clearing line logic impl here
-                println!("{:?}", self.placed_blocks);
-                self.placed_blocks.line_clear(SCREEN_CONF.size.0, SCREEN_CONF.size.1);
-                self.tetromino = Tetromino::from_shape(&Shape::random());
-            }
+                    // if collision, push to placed_blocks the current tetr
+                    let placed = Tetromino::clone(&current_tetr);
+                    self.push_tetr(placed);
+
+                    // clearing line logic impl here
+                    while let Some(y) = self.placed_blocks.line_clear(SCREEN_CONF.size.0, SCREEN_CONF.size.1) {
+                        self.placed_blocks.cut_by_y(y);
+                    }
+                    // generating new tetr logic here
+                    self.tetromino = Tetromino::from_shape(&Shape::random());
+                }
             // if all went good updating current_tetr
             else {
                 current_tetr.update();
@@ -90,6 +96,19 @@ impl event::EventHandler<ggez::GameError> for GameState {
                         current_tetr.move_inline(&dir)
                     }
                 },
+                Direction::Up => {
+                    // adding 1 to look for collision "behind" the wall
+                    current_tetr.turn();
+                    while current_tetr.is_colliding_wall(left_x - 1, &Direction::Left) {                    
+                        current_tetr.move_inline(&Direction::Right)
+                    }
+                    while current_tetr.is_colliding_wall(right_x + 1, &Direction::Right) {
+                        current_tetr.move_inline(&Direction::Left)
+                    }
+                    while current_tetr.is_colliding_wall(SCREEN_CONF.size.1 + 1, &Direction::Down) {
+                       current_tetr.lower(-1);
+                    }
+                }
                 _=> todo!()
             }
         }

@@ -1,13 +1,12 @@
 use ggez::graphics;
-use oorandom::Rand32;
-use getrandom;
-use crate::conf::SCREEN_CONF;
+use crate::block::{Shape,Pos};
 use crate::steering::Direction;
 use crate::col::are_colliding;
 #[derive(Debug)]
 pub struct Tetromino {
     pub blocks: [Pos; 4],
-    shape : Shape
+    shape : Shape,
+    turn_state : u32
 }
 impl Tetromino {
     // constructors
@@ -20,7 +19,8 @@ impl Tetromino {
                     Pos { x: 1, y: 0},
                     Pos { x : 2, y : 0},
                     Pos { x :3, y: 0}],
-                    shape : Shape::Long
+                    shape : Shape::Long,
+                    turn_state : 0
                }
             }
             &Shape::Z => {
@@ -31,7 +31,8 @@ impl Tetromino {
                        Pos { x: 1, y: 1 },
                        Pos { x: 1, y: 2 }
                    ],
-                   shape : Shape::Z
+                   shape : Shape::Z,
+                   turn_state : 0
                }
             }
             &Shape::T => {
@@ -42,7 +43,9 @@ impl Tetromino {
                         Pos { x: 2, y: 0 },
                         Pos { x: 1, y: 1 },
                     ],
-                    shape : Shape::T
+                    shape : Shape::T,
+                    turn_state : 0
+ 
                 }
             }
             &Shape::Square=> {
@@ -53,7 +56,8 @@ impl Tetromino {
                         Pos { x: 0, y: 1 },
                         Pos { x: 1, y: 1 },
                     ],
-                    shape : Shape::Square
+                    shape : Shape::Square,
+                    turn_state : 0
                 }
             }
             &Shape::L => {
@@ -64,7 +68,8 @@ impl Tetromino {
                         Pos { x: 0, y: 2 },
                         Pos { x: 1, y: 2 },
                     ],
-                    shape : Shape::L
+                    shape : Shape::L,
+                    turn_state : 0
                 }
             }
         }
@@ -77,7 +82,8 @@ impl Tetromino {
                 rd,
                 th,
             ],
-            shape
+            shape,
+            turn_state : 0
         }
     }
     pub fn clone(obj : &Tetromino) -> Self {
@@ -156,186 +162,206 @@ impl Tetromino {
             _ => todo!()
         }
     }
-    fn lower(&mut self, dist : i16)  {
+    pub fn lower(&mut self, dist : i16)  {
         for block in self.blocks.iter_mut() {
             block.y += dist;
         }
     }
+    // hardcoding the turning logic because no idea what algorithm would it even be
+    pub fn turn(&mut self) {
+        match self.shape {
+            Shape::Long => {
+                match self.turn_state {
+                    0  => {
+                        self.turn_state = 1;
 
-}
-//
-//
-#[derive(PartialEq)]
-pub struct LineClearResult {
-    y_cord : i16,
-    tetr_indexes : Vec<i16>
-}
-impl LineClearResult {
-    pub fn new(y_cord : i16, tetr_indexes : Vec<i16>) -> Self {
-        LineClearResult {
-            y_cord,
-            tetr_indexes
-        }
-    }
-}
-pub trait TetrIter {
-    //#1 find if any line and which line should be cleared
-    //#2 find what tetrs should be cleared
-    //#3 call another function to clear the tetrs, and lower the tetrs on top
-    fn line_clear(&self, board_width : i16, board_height : i16) -> Option<LineClearResult>;
-    fn max_y(&self, max_height : i16) -> i16;
-}
-impl TetrIter for Vec<Pos> {
-    fn max_y(&self, max_height : i16) -> i16 {
-        let mut max = max_height;
-        if self.len() < 1 {
-            return max
-        }
-        for block in self {
-            if block.y < max {
-                max = block.y;
+                        self.blocks[0].y += -1;
+                        self.blocks[0].x += 1;
+
+                        self.blocks[2].y += 1;
+                        self.blocks[2].x += -1;
+
+                        self.blocks[3].y += 2;
+                        self.blocks[3].x += -2;
+                    },
+                    1 => {
+                        self.turn_state = 0;
+
+                        self.blocks[0].y += 1;
+                        self.blocks[0].x += -1;
+
+                        self.blocks[2].y += -1;
+                        self.blocks[2].x += 1;
+                        
+                        self.blocks[3].y += -2;
+                        self.blocks[3].x += 2;
+                    }
+                    _ => {
+                        self.turn_state = 0;
+                    }
+                }
+            },
+            Shape::Square => {
+                if self.turn_state == 0 {
+                    self.turn_state = 1;
+                }
+                self.turn_state = 0;
+            },
+            Shape::T => {
+                match self.turn_state {
+                    0 => {
+                        self.turn_state = 1; 
+
+                        self.blocks[0].y += -1;
+                        self.blocks[0].x += 1;
+
+                        self.blocks[2].y += 1;
+                        self.blocks[2].x += -1;
+
+                        self.blocks[3].y += -1;
+                        self.blocks[3].x += -1;
+                    },
+                    1 => {
+                        self.turn_state = 2;
+
+                        self.blocks[0].y += 1;
+                        self.blocks[0].x += 1;
+
+                        self.blocks[2].y += -1;
+                        self.blocks[2].x += -1;
+
+                        self.blocks[3].y += -1;
+                        self.blocks[3].x += 1;
+                        
+
+                    },
+                    2 => {
+                        self.turn_state = 3;
+
+                        self.blocks[0].y += 1;
+                        self.blocks[0].x += -1;
+
+                        self.blocks[2].y += -1;
+                        self.blocks[2].x += 1;
+                        
+                        self.blocks[3].y += 1;
+                        self.blocks[3].x += 1;
+
+                    },
+                    3 => {
+                        self.turn_state = 0;
+
+                        self.blocks[0].y += -1;
+                        self.blocks[0].x += -1;
+
+                        self.blocks[2].y += 1;
+                        self.blocks[2].x += 1;
+
+                        self.blocks[3].y += 1;
+                        self.blocks[3].x += -1;
+
+
+                    },
+                    _ => {
+                        self.turn_state = 0;
+                    }
+                }
+            },
+            Shape::Z => {
+                match self.turn_state {
+                    0 => {
+                        self.turn_state = 1;
+
+                        self.blocks[0].x += 2;
+
+                        self.blocks[1].y += -1;
+                        self.blocks[1].x += 1;
+
+                        self.blocks[3].y += -1;
+                        self.blocks[3].x += -1;
+                    },
+                    1 => {
+                        self.turn_state = 0;
+
+                        self.blocks[0].x += -2;
+                        
+                        self.blocks[1].y += 1;
+                        self.blocks[1].x += -1;
+
+                        self.blocks[3].y += 1;
+                        self.blocks[3].x += 1;
+
+                    },
+                    _=> {
+                        self.turn_state = 0;
+                    }
+
+                }
+            },
+            Shape::L => {
+                match self.turn_state {
+                    0 => {
+                        self.turn_state = 1;
+
+                        self.blocks[0].y += 1;
+                        self.blocks[0].x += 2;
+
+                        self.blocks[1].x += 1;
+
+                        self.blocks[2].y += -1;
+                        
+                        self.blocks[3].x += -1;
+                    },
+                    1 => {
+                        self.turn_state = 2;
+
+                        self.blocks[0].y += 1;
+
+                        self.blocks[1].x += 1;
+
+                        self.blocks[2].y += -1;
+                        self.blocks[2].x += 2;
+
+                        self.blocks[3].y += -2;
+                        self.blocks[3].x += 1;
+                    },
+                    2 => {
+                        self.turn_state = 3;
+
+                        self.blocks[0].x += -2;
+
+                        self.blocks[1].y += 1;
+                        self.blocks[1].x += -1;
+
+                        self.blocks[2].y += 2;
+
+                        self.blocks[3].y += 1;
+                        self.blocks[3].x += 1;
+
+                    },
+                    3 => {
+                        self.turn_state = 0;
+
+                        self.blocks[0].y += -2;
+
+                        self.blocks[1].y += -1;
+                        self.blocks[1].x += -1;
+
+                        self.blocks[2].x += -2;
+
+                        self.blocks[3].y += 1;
+                        self.blocks[3].x += -1;
+                    },
+                    _ => self.turn_state = 0
+
+
+                }
+
             }
         }
-        max
     }
-    fn line_clear(&self, bw: i16, bh : i16) -> Option<LineClearResult> {
-        if self.len() < 1 {
-            println!("no line clear");
-            return None
-        }
-        for i in self.max_y(bh)..bh {
-            let mut block_count : i16 = 0;
-            let mut indexes : Vec<i16> = Vec::new();
-            for block in 0..self.len()-1 {
-                if self[block].y == i {
-                    block_count += 1;
-                    indexes.push(block.try_into().unwrap());
-                }
-                if block_count == bw {
-                    println!("line clear");
-                    return Some(LineClearResult::new(i, indexes))
-                }
-            }
-            indexes.clear();
-        }
-        println!("no line clear");
-        return None
-    }
+
 }
 //
 //
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct Pos {
-    pub x:i16,
-    pub y:i16
-}
-pub trait DrawBlock {
-    fn draw(&self, canvas : &mut graphics::Canvas);
-}
-impl DrawBlock for Pos {
-    fn draw(&self, canvas : &mut graphics::Canvas) {
-        canvas.draw(&graphics::Quad, graphics::DrawParam::new()
-                    .dest_rect((*self).into())
-                    .color(graphics::Color::CYAN));
-    }
-}
-impl Pos {
-    pub fn new(x:i16, y:i16) -> Self{
-        Pos { x, y }
-    }
-}
-impl From<(i16, i16)> for Pos {
-    fn from(pos: (i16, i16)) -> Self {
-        Pos { x: pos.0, y: pos.1 }
-    }
-}
-impl From<Pos> for graphics::Rect {
-    fn from(pos: Pos) -> Self {
-        graphics::Rect::new_i32(
-            pos.x as i32 * SCREEN_CONF.cell_size.0 as i32,
-            pos.y as i32 * SCREEN_CONF.cell_size.1 as i32,
-            SCREEN_CONF.cell_size.0 as i32,
-            SCREEN_CONF.cell_size.1 as i32,
-        )
-    }
-}
-#[derive(Clone, Copy, Debug)]
-pub enum Shape {
-    Long,
-    T,
-    Square,
-    Z,
-    L 
-}
-impl Shape {
-    pub fn random() -> Shape{
-        let mut seed: [u8; 8] = [0; 8];
-        getrandom::getrandom(&mut seed[..]).expect("couldnt generate RNG seed");
-        let mut rng = Rand32::new(u64::from_ne_bytes(seed)); 
-        let random_num = rng.rand_range(0..5);
-        match random_num {
-            0 => Shape::Long,
-            1 => Shape::T,
-            2 => Shape::Square,
-            3 => Shape::Z,
-            4 => Shape::L,
-            _ => Shape::Long
-        }
-    }
-}
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn line_clear_filled_fully() {
-        let width : i16 = 2;
-        let height : i16 = 5;
-        let placed_blocks : Vec<Pos> = vec![
-            Pos::new(0, 0),
-            Pos::new(1, 0),
-            Pos::new(2, 0)
-        ];
-        let result = placed_blocks.line_clear(width, height);
-        assert!(result == Some(LineClearResult::new(0,vec![0,1])));
-    }
-    #[test]
-    fn line_clear_filled_partially() {
-        let width : i16 = 2;
-        let height : i16 = 5;
-        let placed_blocks : Vec<Pos> = vec![
-            Pos::new(0,0),
-            Pos::new(0,1),
-            Pos::new(1,0)
-        ];
-        let result = placed_blocks.line_clear(width, height);
-        assert!(result == None)
-
-
-    }
-    #[test]
-    fn line_clear_no_fill() {
-        let width : i16 = 2;
-        let height : i16 = 5;
-        let placed_blocks : Vec<Pos> = Vec::new();
-        let result = placed_blocks.line_clear(width, height);
-        assert!(result == None)
-    }
-    #[test]
-    fn line_clear_dif_y() {
-        let width : i16 = 2;
-        let height : i16 = 5;
-        let placed_blocks : Vec<Pos> = vec![
-            Pos::new(0,0),
-            Pos::new(1,1),
-            Pos::new(2,1)
-        ];
-        let result = placed_blocks.line_clear(width, height);
-        assert!(result == None)
-    }
-}
-
-
-
-
-
 

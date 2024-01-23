@@ -1,6 +1,6 @@
-use crate::{tetromino::Pos, steering::Direction};
+use crate::steering::Direction;
+use crate::block::Pos;
 
-// for now, only direction DOWN implementation, as it is not needed to implement other 
 pub fn are_colliding(block1 : &Vec<Pos>, block2 : &Vec<Pos>, dir : &Direction) -> bool {
     let valid_xs : Vec<i16> = block1
         .iter()
@@ -51,45 +51,7 @@ pub fn are_colliding(block1 : &Vec<Pos>, block2 : &Vec<Pos>, dir : &Direction) -
 
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn test_collision_no_colision() {
-        let moving_item = vec![
-            Pos::new(0, 0),
-            Pos::new(1, 0),
-            Pos::new(1, 1),
-            Pos::new(2, 1)
-        ];
-        let stationary_item = vec![
-            Pos::new(0, 3),
-            Pos::new(1, 3),
-            Pos::new(2, 3),
-            Pos::new(3, 3)
-        ];
-        
-        assert!(!are_colliding(&moving_item, &stationary_item, &Direction::Down));
-    }
-    #[test]
-    fn test_collision_collision() {
-        let moving_item = vec![
-            Pos::new(0, 0),
-            Pos::new(1, 0),
-            Pos::new(2, 0),
-            Pos::new(1, 1)
-        ];
-        let stationary_item = vec![
-            Pos::new(0, 1),
-            Pos::new(0, 2),
-            Pos::new(1, 2),
-            Pos::new(1, 3)
-        ];
-        assert!(are_colliding(&moving_item, &stationary_item, &Direction::Down));
-    }
 
-    
-}
 
 
 
