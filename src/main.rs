@@ -3,6 +3,7 @@ mod conf;
 mod steering;
 mod col;
 mod block;
+
 use crate::tetromino::Tetromino;
 use crate::block::{Shape, Pos, DrawBlock, BlockIter};
 use crate::conf::SCREEN_CONF;
@@ -20,8 +21,9 @@ struct GameState {
 }
 impl GameState {
     pub fn new() -> Self {
+        let tetromino = Tetromino::from_shape(&Shape::Long);
         GameState {
-            tetromino : Tetromino::from_shape(&Shape::Long),
+            tetromino,
             placed_blocks : Vec::new(),
         }
 
@@ -53,10 +55,13 @@ impl event::EventHandler<ggez::GameError> for GameState {
                     }
                     // generating new tetr logic here
                     self.tetromino = Tetromino::from_shape(&Shape::random());
+                    self.tetromino.shadow_blocks = Some(self.tetromino.create_shadow(&self.placed_blocks, SCREEN_CONF.size.1));
                 }
             // if all went good updating current_tetr
             else {
                 current_tetr.update();
+                self.tetromino.shadow_blocks = Some(self.tetromino.create_shadow(&self.placed_blocks, SCREEN_CONF.size.1));
+
             }
             
         }
@@ -108,12 +113,13 @@ impl event::EventHandler<ggez::GameError> for GameState {
                     while current_tetr.is_colliding_wall(SCREEN_CONF.size.1 + 1, &Direction::Down) {
                        current_tetr.lower(-1);
                     }
-                }
-                _=> todo!()
+                },
+                _ => todo!()
             }
         }
         Ok(()) 
     }
+    
 }
 
 fn main() -> GameResult {
