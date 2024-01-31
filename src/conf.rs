@@ -12,7 +12,7 @@ pub const SCREEN_SIZE : (f32, f32) = (
     GRID_SIZE.0 as f32 * GRID_CELL_SIZE.0 as f32,
     GRID_SIZE.1 as f32 * GRID_CELL_SIZE.1 as f32,
     );
-pub const DESIRED_FPS : u32 = 5;
+pub const DESIRED_FPS : u32 = 2;
 pub const TICK_RATE : f32 = 0.5;
 
 

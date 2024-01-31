@@ -36,7 +36,7 @@ impl GameState {
 }
 impl event::EventHandler<ggez::GameError> for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
-        while ctx.time.check_update_time(SCREEN_CONF.desired_fps) {
+        if ctx.time.check_update_time(SCREEN_CONF.desired_fps) {
             let current_tetr = &mut self.tetromino;
             // handling gameover (placed tetrs reached top)
             if current_tetr.is_colliding(&self.placed_blocks, &Direction::Down) && current_tetr.is_colliding_wall(0, &Direction::Up) {
@@ -60,11 +60,13 @@ impl event::EventHandler<ggez::GameError> for GameState {
             // if all went good updating current_tetr
             else {
                 current_tetr.update();
-                self.tetromino.shadow_blocks = Some(self.tetromino.create_shadow(&self.placed_blocks, SCREEN_CONF.size.1));
-
             }
             
         }
+        if ctx.time.check_update_time(SCREEN_CONF.desired_fps * 100) {
+            self.tetromino.shadow_blocks = Some(self.tetromino.create_shadow(&self.placed_blocks, SCREEN_CONF.size.1));
+        }
+
         Ok(()) 
     }
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
@@ -114,7 +116,28 @@ impl event::EventHandler<ggez::GameError> for GameState {
                        current_tetr.lower(-1);
                     }
                 },
-                _ => todo!()
+                Direction::Down => {
+                    if !(current_tetr.is_colliding_wall(SCREEN_CONF.size.1, &dir) || current_tetr.is_colliding(&self.placed_blocks, &dir)){
+                        current_tetr.lower(1);
+                    }
+                },
+                Direction::Space => {
+                    while !(current_tetr.is_colliding_wall(SCREEN_CONF.size.1, &Direction::Down) || current_tetr.is_colliding(&self.placed_blocks, &Direction::Down)){
+                        current_tetr.lower(1);
+                    }
+                    let placed = Tetromino::clone(&current_tetr);
+                    self.push_tetr(placed);
+
+                    // clearing line logic impl here
+                    while let Some(y) = self.placed_blocks.line_clear(SCREEN_CONF.size.0, SCREEN_CONF.size.1) {
+                        self.placed_blocks.cut_by_y(y);
+                    }
+                    // generating new tetr logic here
+                    self.tetromino = Tetromino::from_shape(&Shape::random());
+                    self.tetromino.shadow_blocks = Some(self.tetromino.create_shadow(&self.placed_blocks, SCREEN_CONF.size.1));
+
+
+                },
             }
         }
         Ok(()) 
