@@ -1,4 +1,4 @@
-use ggez::graphics;
+use ggez::graphics::{self, Color};
 use oorandom::Rand32;
 use crate::conf::SCREEN_CONF;
 pub trait BlockIter {
@@ -50,10 +50,11 @@ impl BlockIter for Vec<Pos> {
         self
     }
 }
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Pos {
     pub x:i16,
     pub y:i16,
+    pub color : Option<Color>
 }
 pub trait DrawBlock {
     fn draw(&self, canvas : &mut graphics::Canvas);
@@ -62,26 +63,26 @@ impl DrawBlock for Pos {
     fn draw(&self, canvas : &mut graphics::Canvas) {
         canvas.draw(&graphics::Quad, graphics::DrawParam::new()
                     .dest_rect((*self).into())
-                    .color(graphics::Color::CYAN));
+                    .color(self.color.unwrap()));
     }
 }
 impl Pos {
     pub fn new(x:i16, y:i16) -> Self{
-        Pos { x, y }
+        Pos { x, y, color : None }
     }
 }
 impl From<(i16, i16)> for Pos {
     fn from(pos: (i16, i16)) -> Self {
-        Pos { x: pos.0, y: pos.1 }
+        Pos { x: pos.0, y: pos.1, color : None}
     }
 }
 impl From<Pos> for graphics::Rect {
     fn from(pos: Pos) -> Self {
         graphics::Rect::new_i32(
-            pos.x as i32 * SCREEN_CONF.cell_size.0 as i32,
-            pos.y as i32 * SCREEN_CONF.cell_size.1 as i32,
-            SCREEN_CONF.cell_size.0 as i32,
-            SCREEN_CONF.cell_size.1 as i32,
+            pos.x as i32 * SCREEN_CONF.cell_size.0 as i32 + 1,
+            pos.y as i32 * SCREEN_CONF.cell_size.1 as i32 + 1,
+            SCREEN_CONF.cell_size.0 as i32 - 2,
+            SCREEN_CONF.cell_size.1 as i32 - 2,
         )
     }
 }

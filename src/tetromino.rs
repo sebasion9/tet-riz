@@ -1,4 +1,4 @@
-use ggez::graphics;
+use ggez::graphics::{self, Color};
 use crate::block::{Shape,Pos};
 use crate::steering::Direction;
 use crate::col::are_colliding;
@@ -7,31 +7,32 @@ pub struct Tetromino {
     pub blocks: [Pos; 4],
     pub shadow_blocks : Option<[Pos; 4]>,
     shape : Shape,
-    turn_state : u32
+    turn_state : u32,
 }
 impl Tetromino {
     // constructors
     pub fn from_shape(shape : &Shape) -> Self {
+        let color = color(shape);
         match shape{
             &Shape::Long => {
                 Tetromino {
                     blocks : [ 
-                        Pos { x: 0, y: 0 },
-                        Pos { x: 1, y: 0},
-                        Pos { x : 2, y : 0},
-                        Pos { x :3, y: 0}],
+                        Pos { x: 0, y: 0, color: Some(color) },
+                        Pos { x: 1, y: 0 , color: Some(color)},
+                        Pos { x : 2, y : 0, color: Some(color) },
+                        Pos { x :3, y: 0, color: Some(color)}],
                         shape : Shape::Long,
                         turn_state : 0,
-                        shadow_blocks : None
+                        shadow_blocks : None,
                 }
             }
             &Shape::Z => {
                 Tetromino {
                     blocks : [
-                        Pos { x: 0, y: 0 },
-                        Pos { x: 0, y: 1 },
-                        Pos { x: 1, y: 1 },
-                        Pos { x: 1, y: 2 }
+                        Pos { x: 0, y: 0, color: Some(color) },
+                        Pos { x: 0, y: 1, color: Some(color) },
+                        Pos { x: 1, y: 1, color: Some(color) },
+                        Pos { x: 1, y: 2, color: Some(color) }
                     ],
                     shape : Shape::Z,
                     turn_state : 0,
@@ -41,10 +42,10 @@ impl Tetromino {
             &Shape::T => {
                 Tetromino {
                     blocks  :[
-                        Pos { x: 0, y: 0 },
-                        Pos { x: 1, y: 0 },
-                        Pos { x: 2, y: 0 },
-                        Pos { x: 1, y: 1 },
+                        Pos { x: 0, y: 0, color: Some(color) },
+                        Pos { x: 1, y: 0, color: Some(color) },
+                        Pos { x: 2, y: 0, color: Some(color) },
+                        Pos { x: 1, y: 1, color: Some(color) },
                     ],
                     shape : Shape::T,
                     turn_state : 0,
@@ -55,10 +56,10 @@ impl Tetromino {
             &Shape::Square=> {
                 Tetromino {
                     blocks : [
-                        Pos { x: 0, y: 0 },
-                        Pos { x: 1, y: 0 },
-                        Pos { x: 0, y: 1 },
-                        Pos { x: 1, y: 1 },
+                        Pos { x: 0, y: 0, color: Some(color) },
+                        Pos { x: 1, y: 0, color: Some(color) },
+                        Pos { x: 0, y: 1, color: Some(color) },
+                        Pos { x: 1, y: 1, color: Some(color) },
                     ],
                     shape : Shape::Square,
                     turn_state : 0,
@@ -68,10 +69,10 @@ impl Tetromino {
             &Shape::L => {
                 Tetromino {
                     blocks : [
-                        Pos { x: 0, y: 0 },
-                        Pos { x: 0, y: 1 },
-                        Pos { x: 0, y: 2 },
-                        Pos { x: 1, y: 2 },
+                        Pos { x: 0, y: 0, color: Some(color) },
+                        Pos { x: 0, y: 1, color: Some(color) },
+                        Pos { x: 0, y: 2, color: Some(color) },
+                        Pos { x: 1, y: 2, color: Some(color) },
                     ],
                     shape : Shape::L,
                     turn_state : 0,
@@ -143,22 +144,19 @@ impl Tetromino {
         return false
     }
     // 
+
     pub fn draw(&mut self, canvas : &mut graphics::Canvas) {
+        let color = color(&self.shape);
+        let (r, g, b) = color.to_rgb();
+        let shadow_color : (u8, u8, u8) = ((r as f32 * 0.40) as u8, (g as f32 * 0.40) as u8, (b as f32 * 0.50) as u8);
         for i in 0..4 {
-            let color = match self.shape {
-                Shape::Long => graphics::Color::GREEN,
-                Shape::Z => graphics::Color::RED,
-                Shape::T => graphics::Color::BLUE,
-                Shape::Square => graphics::Color::YELLOW,
-                Shape::L => graphics::Color::MAGENTA
-            };
             canvas.draw(&graphics::Quad, graphics::DrawParam::new()
                         .dest_rect(self.blocks[i].into())
                         .color(color));
             if let Some(shadow) = self.shadow_blocks {
                 canvas.draw(&graphics::Quad, graphics::DrawParam::new()
                             .dest_rect(shadow[i].into())
-                            .color(graphics::Color::WHITE));
+                            .color(shadow_color));
             }
         }
     }
@@ -383,4 +381,13 @@ impl Tetromino {
 }
 //
 //
-
+fn color(shape: &Shape) -> Color {
+    let color = match shape {
+        Shape::Long => graphics::Color::GREEN,
+        Shape::Z => graphics::Color::RED,
+        Shape::T => graphics::Color::BLUE,
+        Shape::Square => graphics::Color::YELLOW,
+        Shape::L => graphics::Color::MAGENTA
+    };
+    color
+}
