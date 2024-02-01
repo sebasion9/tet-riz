@@ -6,8 +6,8 @@ pub struct ScreenConf {
     pub tick_rate : f32
 }
 // dev conf
-pub const GRID_SIZE: (i16, i16) = (10, 30);
-pub const GRID_CELL_SIZE : (i16, i16) = (20, 20);
+pub const GRID_SIZE: (i16, i16) = (10, 20);
+pub const GRID_CELL_SIZE : (i16, i16) = (40, 40);
 pub const SCREEN_SIZE : (f32, f32) = (
     GRID_SIZE.0 as f32 * GRID_CELL_SIZE.0 as f32,
     GRID_SIZE.1 as f32 * GRID_CELL_SIZE.1 as f32,

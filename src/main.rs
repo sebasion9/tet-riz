@@ -3,23 +3,27 @@ mod conf;
 mod steering;
 mod col;
 mod block;
+mod menu;
 
 use crate::tetromino::Tetromino;
 use crate::block::{Shape, Pos, DrawBlock, BlockIter};
 use crate::conf::SCREEN_CONF;
+use ggez::event::MouseButton;
 use ggez::{
     event, graphics,
     Context, GameResult,
 };
+use menu::TextBlock;
 use steering::Direction;
+#[derive(PartialEq)]
 enum Mode{
-    Menu,
-    Game
+    MenuLoop,
+    GameLoop
 }
 impl GameState {
     pub fn main_loop_handler(&mut self, _ctx : &mut Context) -> GameResult {
         match self.mode {
-            Mode::Game => {
+            Mode::GameLoop => {
                 let current_tetr = &mut self.tetromino;
                 // handling gameover (placed tetrs reached top)
                 if current_tetr.is_colliding(&self.placed_blocks, &Direction::Down) && current_tetr.is_colliding_wall(0, &Direction::Up) {
@@ -47,8 +51,8 @@ impl GameState {
                 }
                 Ok(())
             }
-            Mode::Menu => {
-                todo!();
+            Mode::MenuLoop => {
+                Ok(())
             }
         }
     }
@@ -57,16 +61,25 @@ impl GameState {
 struct GameState {
     tetromino : Tetromino,
     placed_blocks : Vec<Pos>,
-    mode : Mode
+    mode : Mode,
+    menu : menu::Menu
 }
 impl GameState {
     pub fn new() -> Self {
         let tetromino = Tetromino::from_shape(&Shape::Long);
+        let w = (SCREEN_CONF.screen_size.0 / 5.0) * 3.0;
+        let h = (SCREEN_CONF.screen_size.1 / 10.0) * 8.0;
+        let x = SCREEN_CONF.screen_size.0 / 5.0;
+        let y = SCREEN_CONF.screen_size.1 / 10.0;
         GameState {
             tetromino,
             placed_blocks : Vec::new(),
             // later change to menu
-            mode : Mode::Game
+            mode : Mode::MenuLoop,
+            menu : menu::Menu::new(vec![
+                                   TextBlock::new(x + 30.0, y + 50.0, w - 60.0, 40.0, "TETRUST"),
+                                   TextBlock::new(x + 30.0, y + 120.0, w - 60.0, 80.0, "PLAY")
+            ])
         }
 
     }
@@ -91,10 +104,17 @@ impl event::EventHandler<ggez::GameError> for GameState {
     }
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = graphics::Canvas::from_frame(ctx, graphics::Color::BLACK);
-        self.tetromino.draw(&mut canvas);
-        if self.placed_blocks.len() > 0 {
-            for block in &mut self.placed_blocks {
-                block.draw(&mut canvas);
+        match self.mode {
+            Mode::GameLoop => {
+                self.tetromino.draw(&mut canvas);
+                if self.placed_blocks.len() > 0 {
+                    for block in &mut self.placed_blocks {
+                        block.draw(&mut canvas);
+                    }
+                }
+            },
+            Mode::MenuLoop => {
+                self.menu.draw(&mut canvas);
             }
         }
 
@@ -162,11 +182,27 @@ impl event::EventHandler<ggez::GameError> for GameState {
         }
         Ok(()) 
     }
-    
+    fn mouse_button_down_event(
+        &mut self,
+        ctx: &mut Context,
+        button: event::MouseButton,
+        x: f32,
+        y: f32,
+        ) -> Result<(), ggez::GameError> {
+        let play_button = self.menu.text_blocks[1].block;
+        if !(button == MouseButton::Left && self.mode == Mode::MenuLoop) {
+            return Ok(()) 
+        }
+        if x > play_button.x && x < (play_button.x + play_button.w) && y > play_button.y && y < (play_button.y + play_button.h) {
+            self.mode = Mode::GameLoop;
+        }
+        Ok(())
+    }
+
 }
 
 fn main() -> GameResult {
-    let (ctx, event_loop) = ggez::ContextBuilder::new("snake", "awesome guy")
+    let (ctx, event_loop) = ggez::ContextBuilder::new("tetris", "awesome guy")
         .window_setup(ggez::conf::WindowSetup::default().title("tetris!"))
         .window_mode(ggez::conf::WindowMode::default().dimensions(SCREEN_CONF.screen_size.0, SCREEN_CONF.screen_size.1))
         .build()?;
