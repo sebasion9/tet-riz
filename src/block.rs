@@ -1,6 +1,6 @@
-use ggez::graphics::{self, Color};
+use ggez::graphics;
 use oorandom::Rand32;
-use crate::conf::SCREEN_CONF;
+use crate::conf::{SCREEN_CONF, color};
 pub trait BlockIter {
     fn line_clear(&self, board_width : i16, board_height : i16) -> Option<i16>;
     fn max_y(&self, max_height : i16) -> i16;
@@ -54,7 +54,7 @@ impl BlockIter for Vec<Pos> {
 pub struct Pos {
     pub x:i16,
     pub y:i16,
-    pub color : Option<Color>
+    pub color : color::Color
 }
 pub trait DrawBlock {
     fn draw(&self, canvas : &mut graphics::Canvas);
@@ -63,17 +63,17 @@ impl DrawBlock for Pos {
     fn draw(&self, canvas : &mut graphics::Canvas) {
         canvas.draw(&graphics::Quad, graphics::DrawParam::new()
                     .dest_rect((*self).into())
-                    .color(self.color.unwrap()));
+                    .color(self.color.to_rgb()));
     }
 }
 impl Pos {
     pub fn new(x:i16, y:i16) -> Self{
-        Pos { x, y, color : None }
+        Pos { x, y, color : color::WHITE }
     }
 }
 impl From<(i16, i16)> for Pos {
     fn from(pos: (i16, i16)) -> Self {
-        Pos { x: pos.0, y: pos.1, color : None}
+        Pos { x: pos.0, y: pos.1, color : color::WHITE}
     }
 }
 impl From<Pos> for graphics::Rect {
