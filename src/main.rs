@@ -20,49 +20,6 @@ enum Mode{
     MenuLoop,
     GameLoop
 }
-impl GameState {
-    pub fn main_loop_handler(&mut self, _ctx : &mut Context) -> GameResult {
-        match self.mode {
-            Mode::GameLoop => {
-                let current_tetr = &mut self.tetromino;
-                // handling gameover (placed tetrs reached top)
-                if current_tetr.is_colliding(&self.placed_blocks, &Direction::Down) && current_tetr.is_colliding_wall(0, &Direction::Up) {
-                    return Ok(())
-                }
-                // hanlding placing tetrs on the bottom
-                if 
-                    current_tetr.is_colliding(&self.placed_blocks, &Direction::Down) || current_tetr.is_colliding_wall(SCREEN_CONF.size.1, &Direction::Down) {
-                        // if collision, push to placed_blocks the current tetr
-                        let placed = Tetromino::clone(&current_tetr);
-                        self.push_tetr(placed);
-
-                        // clearing line logic impl here
-                        while let Some(y) = self.placed_blocks.line_clear(SCREEN_CONF.size.0, SCREEN_CONF.size.1) {
-                            self.placed_blocks.cut_by_y(y);
-                        }
-                        // generating new tetr logic here
-                        let random_shape = Shape::random();
-                        self.tetromino = Tetromino::from_shape(&random_shape);
-                        self.tetromino.shadow_blocks = Some(self.tetromino.create_shadow(&self.placed_blocks, SCREEN_CONF.size.1));
-                    }
-                // if all went good updating current_tetr
-                else {
-                    current_tetr.update();
-                }
-                Ok(())
-            }
-            Mode::MenuLoop => {
-                if self.blink_flag {
-                    self.menu.update(color::GREEN);
-                    return Ok(())
-                }
-                self.menu.update(color::WHITE);
-                Ok(())
-            }
-        }
-    }
-}
-
 struct GameState {
     tetromino : Tetromino,
     placed_blocks : Vec<Pos>,
@@ -84,7 +41,8 @@ impl GameState {
             blink_flag : false,
             menu : menu::Menu::new(vec![
                                    TextBlock::new(x + 30.0, y + 50.0, w - 60.0, 40.0, "TETRUST"),
-                                   TextBlock::new(x + 30.0, y + 120.0, w - 60.0, 80.0, "PLAY")
+                                   TextBlock::new(x + 30.0, y + 120.0, w - 60.0, 40.0, "NEW GAME"),
+                                   TextBlock::new(x + 30.0, y + 190.0, w - 60.0, 40.0, "OPTIONS")
             ])
         }
 
@@ -97,17 +55,60 @@ impl GameState {
 }
 impl event::EventHandler<ggez::GameError> for GameState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
-        if ctx.time.check_update_time(SCREEN_CONF.desired_fps) {
-            self.blink_flag = !self.blink_flag; 
-            if let Ok(res) = self.main_loop_handler(ctx) {
-                return Ok(res)
+        match self.mode {
+            Mode::MenuLoop => {
+                if ctx.time.check_update_time(SCREEN_CONF.desired_fps) {
+                    self.blink_flag = !self.blink_flag; 
+                    if self.blink_flag {
+                        self.menu.update_slow(color::GREEN);
+                    }
+                    else {
+                        self.menu.update_slow(color::WHITE);
+                    }
+                }
+                if ctx.time.check_update_time(SCREEN_CONF.desired_fps * 100) {
+                    self.menu.update();
+                    self.menu.text_blocks.iter_mut().for_each(|text_block| text_block.is_selected = false);
+                    self.menu.text_blocks[self.menu.selection_state].is_selected = true;
+                }
+                Ok(())
+            },
+            Mode::GameLoop => {
+                if ctx.time.check_update_time(SCREEN_CONF.desired_fps) {
+                    let current_tetr = &mut self.tetromino;
+                    // handling gameover (placed tetrs reached top)
+                    if current_tetr.is_colliding(&self.placed_blocks, &Direction::Down) && current_tetr.is_colliding_wall(0, &Direction::Up) {
+                        return Ok(())
+                    }
+                    // hanlding placing tetrs on the bottom
+                    if 
+                        current_tetr.is_colliding(&self.placed_blocks, &Direction::Down) || current_tetr.is_colliding_wall(SCREEN_CONF.size.1, &Direction::Down) {
+                            // if collision, push to placed_blocks the current tetr
+                            let placed = Tetromino::clone(&current_tetr);
+                            self.push_tetr(placed);
+
+                            // clearing line logic impl here
+                            while let Some(y) = self.placed_blocks.line_clear(SCREEN_CONF.size.0, SCREEN_CONF.size.1) {
+                                self.placed_blocks.cut_by_y(y);
+                            }
+                            // generating new tetr logic here
+                            let random_shape = Shape::random();
+                            self.tetromino = Tetromino::from_shape(&random_shape);
+                            self.tetromino.shadow_blocks = Some(self.tetromino.create_shadow(&self.placed_blocks, SCREEN_CONF.size.1));
+                        }
+                    // if all went good updating current_tetr
+                    else {
+                        current_tetr.update();
+                    }
+                    return Ok(())
+                }
+                if ctx.time.check_update_time(SCREEN_CONF.desired_fps * 100) {
+                    self.tetromino.shadow_blocks = Some(self.tetromino.create_shadow(&self.placed_blocks, SCREEN_CONF.size.1));
+                }
+                Ok(())
+
             }
         }
-        if ctx.time.check_update_time(SCREEN_CONF.desired_fps * 100) {
-            self.tetromino.shadow_blocks = Some(self.tetromino.create_shadow(&self.placed_blocks, SCREEN_CONF.size.1));
-        }
-
-        Ok(()) 
     }
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = graphics::Canvas::from_frame(ctx, color::BLACK);
@@ -139,8 +140,28 @@ impl event::EventHandler<ggez::GameError> for GameState {
         let left_x = 0 as i16;
         let right_x = SCREEN_CONF.size.0;
         if self.mode == Mode::MenuLoop {
-            if let Some(_dir) = input.keycode.and_then(Direction::from_keycode) {
-                self.mode = Mode::GameLoop;
+            if let Some(dir) = input.keycode.and_then(Direction::from_keycode) {
+                match dir {
+                    Direction::Down => {
+                        if self.menu.selection_state < self.menu.text_blocks.len() - 1 {
+                            self.menu.selection_state += 1;    
+                        }
+                    },
+                    Direction::Up => {
+                        if self.menu.selection_state > 1 {
+                            self.menu.selection_state -= 1;
+                        }
+                    }
+                    Direction::Space => {
+                        if self.menu.selection_state == 1 {
+                            self.mode = Mode::GameLoop;
+                        }
+                    }
+                    _=> {
+
+                    }
+
+                }
             }
             return Ok(())
         }
